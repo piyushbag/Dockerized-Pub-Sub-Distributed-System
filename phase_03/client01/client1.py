@@ -10,7 +10,7 @@ def Main():
     print("Subscriber is :",subscriberName)
     
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    s.connect((host,port))  # Connect to server
+    s.connect((host,port))  # Connect to server.
     
     flag = True
     
