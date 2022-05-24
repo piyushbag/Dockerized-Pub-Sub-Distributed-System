@@ -3,22 +3,22 @@ import socket
 
 def Main():
     
-    host = 'server002' # localhost # alias of server 02 in docker network
+    host = 'server_2' # localhost # alias of server 02 in docker network
     port =  5030
     
-    subscriberName = str(sys.argv[1])
-    print("Subscriber is :",subscriberName)
+    name_of_subscriber = str(sys.argv[1])
+    print("The Subscriber Crypto is :",name_of_subscriber)
     
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     s.connect((host,port))  # Connect to server
     
-    flag = True
+    signal = True
     
     while True:
        
-        if flag:
-            s.send(subscriberName.encode())
-            flag = False
+        if signal:
+            s.send(name_of_subscriber.encode())
+            signal = False
         
         data = s.recv(2048).decode()
         print(data)

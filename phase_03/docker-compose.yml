@@ -21,7 +21,7 @@ services:
       - pub-sub-distributed-rendezvous
     depends_on:
       - server1
-    container_name: server002
+    container_name: server_2
 
   client1:
     build: ./client01

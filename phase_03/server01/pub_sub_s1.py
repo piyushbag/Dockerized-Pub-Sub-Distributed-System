@@ -12,7 +12,7 @@ from threading import Timer
 
 clientList = []
 
-all_topics = ['weather','politics','sports','ub','cse586']
+all_topics = ['weather','politics','sports','ub','COEN317']
 
 topics = ['weather','politics','sports'] # server1's responsibility is generate events of these topics
 
@@ -20,25 +20,25 @@ subscriptions = {}
 
 events = {'weather' : ['There will be rain today!', 'Sunny weather', 'Extreme cold is coming'],
     'politics' : ['Today is election', 'Who will win: democrate or republic?','Democracy is not for dumb people'],
-    'sports' : ['Bangladesh is one of the best cricket team','Messi strikes again!','TT is the best indoor game']
+    'sports' : ['Bangladesh is one of the best cricket team','Messi strikes again!','Poker is the best indoor game']
 }
 
 # { subscriberName : [msg1, msg2,, ] , ... }
 generatedEvents = dict()
 
-flags = dict()
+signal = dict()
 
 # Handle any client's connection
 
-def threadedClient(connection, data):
+def clientThread(connection, data):
     while True:
-        flags[data] = 0
-        subscribe(data) # Generate subscription for the connected subscriber
-        subscriptionInfo = 'Your subscriptions are : ' + str(subscriptions[data])
-        connection.send(subscriptionInfo.encode())
+        signal[data] = 0
+        subscription(data) # Generate subscription for the connected subscriber
+        subscribe_info = 'Your subscriptions are : ' + str(subscriptions[data])
+        connection.send(subscribe_info.encode())
 
         while True:
-            if flags[data]==1:
+            if signal[data]==1:
                 notify(connection,data)
     connection.close()
 
@@ -46,27 +46,27 @@ def threadedClient(connection, data):
 
 # Handle other server's connection
 
-def threadedServerSender(connection, data):
+def server_thread_sender(connection, data):
     while True:
-        flags[data] = 0
+        signal[data] = 0
         subscriptions[data] = topics  # Other server's  are subscribed to the all topics of this server
-        subscriptionInfo = 'Your subscriptions are : ' + str(subscriptions[data])
-        connection.send(subscriptionInfo.encode())
+        subscribe_info = 'Your subscriptions are : ' + str(subscriptions[data])
+        connection.send(subscribe_info.encode())
         
         while True:
-            if flags[data]==1:
+            if signal[data]==1:
                 notify(connection,data)
     connection.close()
 
 
-def threadedServerReceiver(connection, data):
+def server_thread_receiver(connection, data):
     while True:
         serverData = connection.recv(2048).decode()
         m = serverData.split('-')
         if len(m)==2:
             topic = m[0]
             event = m[1]
-            publish(topic,event,0)
+            publisher(topic,event,0)
     connection.close()
 
 
@@ -74,11 +74,11 @@ def threadedServerReceiver(connection, data):
 ## SUBSCRIBE()
 
 
-def subscribe(name):
-    subscriptions[name] = randomSubscriptionGenerator()
+def subscription(name):
+    subscriptions[name] = generate_subscription_randomly()
 
 
-def randomSubscriptionGenerator():
+def generate_subscription_randomly():
     subscribedTopicsList = random.sample(all_topics,random.choice(list(range(1,len(all_topics)+1))))
     return subscribedTopicsList
 
@@ -86,16 +86,16 @@ def randomSubscriptionGenerator():
 
 ## PUBLISH() and ADVERTIZE()
 
-def eventGenerator():
+def generate_event():
     
     topic = random.choice(topics)
     msgList = events[topic]
     event = msgList[random.choice(list(range(1,len(msgList))))]
     
-    publish(topic,event,1) # call publish() for publishing the new event
+    publisher(topic,event,1) # call publisher() for publishing the new event
 
 
-def publish(topic,event,indicator):
+def publisher(topic,event,indicator):
     
     event = topic + '-' + event  # Concatenate topic and event
     print(event)  # print the event in server console
@@ -108,7 +108,7 @@ def publish(topic,event,indicator):
                     generatedEvents[name].append(event)
                 else:
                     generatedEvents.setdefault(name, []).append(event)
-                flags[name] = 1
+                signal[name] = 1
 
     # publishing received events to interested subscriber (only subscribers)
     else:
@@ -119,9 +119,9 @@ def publish(topic,event,indicator):
                         generatedEvents[name].append(event)
                     else:
                         generatedEvents.setdefault(name, []).append(event)
-                    flags[name] = 1
+                    signal[name] = 1
 
-    t = Timer(random.choice(list(range(20,26))), eventGenerator)
+    t = Timer(random.choice(list(range(20,26))), generate_event)
     t.start()
 
                  
@@ -131,7 +131,7 @@ def notify(connection,name):
             msg = msg  # + str("\n")
             connection.send(msg.encode())
         del generatedEvents[name]
-        flags[name] = 0
+        signal[name] = 0
 
 
 
@@ -153,8 +153,8 @@ def Main():
 
     print("Socket is now listening for new connection ...")
     
-    # eventGenerator() will be called in a new thread after 10 to 15 seconds
-    t = Timer(random.choice(list(range(20,26))), eventGenerator)
+    # generate_event() will be called in a new thread after 10 to 15 seconds
+    t = Timer(random.choice(list(range(20,26))), generate_event)
     t.start()
     
     # An infinity loop - server will be up for infinity and beyond
@@ -176,10 +176,10 @@ def Main():
         
         if l[0]=='c':
             clientList.append(l[1])
-            start_new_thread(threadedClient, (connection,l[1]))
+            start_new_thread(clientThread, (connection,l[1]))
         if l[0]=='s':
-            start_new_thread(threadedServerSender, (connection,l[1]))
-            start_new_thread(threadedServerReceiver, (connection,l[1]))
+            start_new_thread(server_thread_sender, (connection,l[1]))
+            start_new_thread(server_thread_receiver, (connection,l[1]))
 
     s.close()
 
